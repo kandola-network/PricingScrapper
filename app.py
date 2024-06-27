@@ -65,20 +65,20 @@ def awsScraper():
               updateDoc['memory']=float(row.attributes.get('memory').replace(' GiB',''))
           if row.attributes.get('vcpu'):
               updateDoc['vcpu']=int(row.attributes.get('vcpu'))
-          if row.attributes.get('databaseEngine')  in ['MariaDB','PostgreSQL','MySQL','Oracle']:
-            updateDoc['databaseEngine']= str(row.attributes['databaseEngine']),
+          if row.attributes.get('databaseEngine')  in ['MariaDB','PostgreSQL','MySQL']:
+            updateDoc['databaseEngine']= row.attributes.get('databaseEngine')
             updateDoc['provider']='aws'
             reservations=[]
             offerList=[]
             if row.productFamily == 'Database Storage':
-              minStorageAmount, minStorageUnit = row.attributes.get('maxVolumeSize').split(' ')
+              minStorageAmount, minStorageUnit = row.attributes.get('minVolumeSize').split(' ')
               maxStorageAmount, maxStorageUnit = row.attributes.get('maxVolumeSize').split(' ')
               if minStorageUnit == 'TB':
                 minStorageAmount = int(minStorageAmount) * 1024
               if maxStorageUnit == 'TB':
                 maxStorageAmount = int(maxStorageAmount) * 1024
-              updateDoc['minVolumeSize']=minStorageAmount
-              updateDoc['maxVolumeSize']=maxStorageAmount
+              updateDoc['minVolumeSize']=int(minStorageAmount)
+              updateDoc['maxVolumeSize']=int(maxStorageAmount)
               updateDoc['volumeType']=row.attributes.get('volumeType')
               updateDoc['storageMedia']=row.attributes.get('storageMedia')
             if response.get('terms').get('OnDemand').get(row.sku):
@@ -88,18 +88,18 @@ def awsScraper():
                     offerList.append({
                         'reservation':'OnDemand',
                         'unit':j.get('unit'),
-                        'pricePerUnit':j.get('pricePerUnit').get('USD'),
+                        'pricePerUnit':float(j.get('pricePerUnit').get('USD')),
                     })
             if response.get('terms').get('Reserved').get(row.sku):
               reservations.append('Reserved')
-              for i in response.get('terms').get('Reserved').get('4RPTZZPDNYGAVHMP').values():
+              for i in response.get('terms').get('Reserved').get(row.sku).values():
                 for j in i['priceDimensions'].values():
                     if i.get('termAttributes').get('PurchaseOption') == 'All Upfront' and j.get('unit')=='Quantity':
                         offerList.append({
                             'reservation':'Reserved',
                             'unit':j.get('unit'),
                             'duration': int(i.get('termAttributes').get('LeaseContractLength').split('yr')[0]),
-                            'pricePerUnit': j.get('pricePerUnit').get('USD'),
+                            'pricePerUnit': float(j.get('pricePerUnit').get('USD')),
                         })
             updateDoc['offers']=offerList
             updateDoc['reservations']=reservations
