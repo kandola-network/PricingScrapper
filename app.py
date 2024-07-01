@@ -4,6 +4,11 @@ import pandas as pd
 import os
 import time
 from pymongo import UpdateOne, MongoClient
+import os
+from flask import Flask
+
+# Create a Flask application
+app = Flask(__name__)
 
 def awsScraper():
   response=requests.get('https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonRDS/current/index.json')
@@ -120,5 +125,24 @@ def awsScraper():
   pricing.delete_many({"__v":{"$lt":cornVersions},"provider":"aws"})
   print('Deleted old version data if any')
   return
-awsScraper()
-print('done')
+
+
+# Define a route for the home page
+@app.route('/')
+def hello():
+    print('running')
+    try:
+      awsScraper()
+    except Exception as e:
+      print(e)
+      print('Exception occured')
+    return "Updated", 200
+@app.route('/health')
+def health():
+    return "Healthy", 200
+
+# Run the application
+if __name__ == '__main__':
+    # Get the port number from environment variable or use default
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)
